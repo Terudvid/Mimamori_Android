@@ -3,10 +3,9 @@ package com.edu.self.mimamori;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
-import android.location.LocationProvider;
-import android.location.Geocoder;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -14,8 +13,6 @@ import android.widget.TextView;
 
 import com.parse.Parse;
 import com.parse.ParseObject;
-
-import org.w3c.dom.Text;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -39,6 +36,16 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        /**
+         *  ParseはApplicationを継承したクラスに書いておいたほうがいいよ！
+         *
+         *  設定方法はAndroidManifestの中
+         *    android:name=".MainActivity"の下に
+         *    android:application = "---クラス名の絶対パス"
+         *
+         *   がいいよ〜
+         */
+
         // [Optional] Power your app with Local Datastore. For more info, go to
         // https://parse.com/docs/android/guide#local-datastore
         Parse.enableLocalDatastore(this);
@@ -51,7 +58,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
         longitude = 0.0;
         latitude = 0.0;
 
-        locationManager = (LocationManager) this.getSystemService(LOCATION_SERVICE);
+        locationManager = (LocationManager)getSystemService(LOCATION_SERVICE);
 
         latitudeTextView.setText("経度");
         longitudeTextView.setText("緯度");
@@ -59,10 +66,20 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
 
     }
 
+    @Override
+    protected void onPause() {
+        super.onPause();
+    }
+/**
+ requestLoactionUpdatesの第一引数はGPS_PROVIDERで設定する。
+ NETWORK_PROVIDERではnullが起きる.
+ どうやらNETWORK_PRIVIDERは呼び出しごとに初期化処理をしてから値を取得しようとしているみたい。
+ */
+
     public void start(View v){
 
         locationManager.requestLocationUpdates(
-                LocationManager.NETWORK_PROVIDER,
+                LocationManager.GPS_PROVIDER,
                 10000, // 通知のための最小時間間隔（ミリ秒）
                 100, // 通知のための最小距離間隔（メートル）
                 this
@@ -74,20 +91,34 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
 
     }
 
-    public void stop(View v){
+    public void stop(View v) {
 
         locationManager.removeUpdates(this);
-
         latitudeTextView.setText("経度");
         longitudeTextView.setText("緯度");
         statusTextView.setText("計測中断");
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        locationManager.removeUpdates(this);
+    }
+
+    /**
+     * StartButtonにのRequestLoactionManagerの第二引数に設定されている時間ごとにに呼び出されるメソッド
+     *
+     *　
+     * @param location 位置情報
+     */
+
+    @Override
     public void onLocationChanged(Location location) {
 
+        Log.d("OnLocationChanged", "called");
+
         locationManager.requestLocationUpdates(
-                LocationManager.NETWORK_PROVIDER,
+                LocationManager.GPS_PROVIDER,
                 100000, // 通知のための最小時間間隔（ミリ秒）
                 100, // 通知のための最小距離間隔（メートル）
                 this
@@ -104,8 +135,8 @@ public class MainActivity extends AppCompatActivity implements LocationListener 
         geoObject.put("longitude", longitude);
 
 
-//        Long longTimeStamp = System.currentTimeMillis()/1000;
-//        String timestamp = longTimeStamp.toString();
+        Long longTimeStamp = System.currentTimeMillis()/1000;
+        String timestamp = longTimeStamp.toString();
         Calendar c = Calendar.getInstance();
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd h:mm:ss");
         String timeStamp = sdf.format(c.getTime());
